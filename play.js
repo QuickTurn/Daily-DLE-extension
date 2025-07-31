@@ -49,7 +49,16 @@ async function proceed(markAsDone = false) {
   }
 }
 
+// Just show current bookmark title, don't open it again
+(async () => {
+  const { index, bookmarkIds } = await getPlayState();
+  if (index < bookmarkIds.length) {
+    const bm = await browser.bookmarks.get(bookmarkIds[index]).then(r => r[0]);
+    title.textContent = `Now: ${bm.title}`;
+  } else {
+    title.textContent = "All done!";
+  }
+})();
+
 doneBtn.addEventListener("click", () => proceed(true));
 skipBtn.addEventListener("click", () => proceed(false));
-
-proceed(false); // Load current item
