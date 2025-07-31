@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DLE Bookmark Navigator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h2>Select Folder</h2>
+  <select id="folderSelect"></select>
+  <div id="info"></div>
+
+  <ul id="bookmarkList"></ul>
+
+  <template id="bookmarkTemplate">
+    <li>
+      <span class="title"></span>
+      <label>
+        <input type="checkbox" class="doneCheckbox">
+        Done Today
+      </label>
+      <select class="categorySelect"></select>
+    </li>
+  </template>
+</body>
+<script src="popup.js"></script>
+</html>
