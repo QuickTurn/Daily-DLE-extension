@@ -1,22 +1,21 @@
 const defaultCategories = ["Word", "Geo", "Music"];
 
 let currentFolderId = null;
-let bookmarkData = {}; // id -> { doneToday, lastChecked, category }
+let bookmarkData = {};
 
 document.addEventListener("DOMContentLoaded", async () => {
   const folderSelect = document.getElementById("folderSelect");
   const info = document.getElementById("info");
   const list = document.getElementById("bookmarkList");
   const template = document.getElementById("bookmarkTemplate");
+  const startPlayBtn = document.getElementById("startPlayBtn");
 
-  // Load saved state
   const stored = await browser.storage.local.get(["lastFolderId", "bookmarkData"]);
   currentFolderId = stored.lastFolderId || null;
   bookmarkData = stored.bookmarkData || {};
 
   await updateResetStatus();
 
-  // Load bookmark folders
   const nodes = await browser.bookmarks.getTree();
   const folders = [];
   const traverse = (node) => {
@@ -61,7 +60,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       titleSpan.textContent = bm.title;
       categorySelect.innerHTML = "";
 
-      // Add default categories
       defaultCategories.forEach((cat) => {
         const option = document.createElement("option");
         option.value = cat;
@@ -69,12 +67,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         categorySelect.appendChild(option);
       });
 
-      // Load stored data
       const data = bookmarkData[bm.id] || {};
       checkbox.checked = data.doneToday || false;
       categorySelect.value = data.category || "";
 
-      // Handlers
       checkbox.addEventListener("change", () => {
         bookmarkData[bm.id] = {
           ...bookmarkData[bm.id],
@@ -111,9 +107,35 @@ document.addEventListener("DOMContentLoaded", async () => {
       const lastDate = data.lastChecked.split("T")[0];
       if (lastDate < todayUTC) {
         data.doneToday = false;
-        // Don't update lastChecked until checkbox is changed again
       }
     }
     await saveData();
   }
+
+  startPlayBtn.addEventListener("click", async () => {
+    if (!currentFolderId) return;
+    const results = await browser.bookmarks.getSubTree(currentFolderId);
+    const folder = results[0];
+    const playBookmarks = folder.children.filter((b) => b.url);
+
+    await browser.storage.local.set({
+      playState: {
+        index: 0,
+        folderId: currentFolderId,
+        bookmarkIds: playBookmarks.map((b) => b.id)
+      }
+    });
+
+    if (playBookmarks.length > 0) {
+      const first = playBookmarks[0];
+      await browser.tabs.create({ url: first.url });
+
+      browser.windows.create({
+        url: browser.runtime.getURL("play.html"),
+        type: "popup",
+        width: 300,
+        height: 200
+      });
+    }
+  });
 });
