@@ -1,0 +1,11 @@
+{
+  "manifest_version": 2,
+  "name": "Daily DLE Navigator",
+  "version": "1.0",
+  "description": "Navigate, Categorize and Track Bookmarked DLE websites by category and daily checkboxes",
+  "permissions": ["bookmarks", "storage", "tabs"],
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_title": "DLE Navigator"
+  }
+}
