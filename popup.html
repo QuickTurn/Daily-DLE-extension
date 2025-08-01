@@ -11,7 +11,20 @@
 
   <button id="startPlayBtn">Start Play Mode</button>
 
-  <ul id="bookmarkList"></ul>
+  <div id="categoryContainer"></div>
+
+  <template id="categoryTemplate">
+    <div class="category-block">
+      <div class="category-header">
+        <img src="icons/arrow_down.png" class="toggleCategory arrow" />
+        <label class="categoryLabel">
+          <input type="checkbox" class="categoryEnabled">
+          <span class="categoryName"></span>
+        </label>
+      </div>
+      <ul class="bookmark-list"></ul>
+    </div>
+  </template>
 
   <template id="bookmarkTemplate">
     <li>

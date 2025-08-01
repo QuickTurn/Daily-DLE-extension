@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Bookmark Folder Navigator",
-  "version": "1.2",
+  "version": "1.0",
   "description": "Navigate and track bookmarks with categories, done checkboxes, and play mode.",
   "permissions": ["bookmarks", "storage", "tabs"],
   "background": {
@@ -16,7 +16,7 @@
     },
     "skip_game": {
       "suggested_key": {
-        "default": "Ctrl+Shift+X"
+        "default": "Ctrl+Alt+Y"
       },
       "description": "Skip current game"
     }

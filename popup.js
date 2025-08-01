@@ -1,18 +1,24 @@
-const defaultCategories = ["Word", "Geo", "Music"];
-
+const defaultCategories = ["Word-Game", "Geo-Game", "Music-Game", "Puzzle-Game"];
 let currentFolderId = null;
 let bookmarkData = {};
+let categoryStates = {};
 
 document.addEventListener("DOMContentLoaded", async () => {
   const folderSelect = document.getElementById("folderSelect");
   const info = document.getElementById("info");
-  const list = document.getElementById("bookmarkList");
-  const template = document.getElementById("bookmarkTemplate");
   const startPlayBtn = document.getElementById("startPlayBtn");
+  const categoryContainer = document.getElementById("categoryContainer");
 
-  const stored = await browser.storage.local.get(["lastFolderId", "bookmarkData"]);
+  const stored = await browser.storage.local.get(["lastFolderId", "bookmarkData", "categoryStates"]);
   currentFolderId = stored.lastFolderId || null;
   bookmarkData = stored.bookmarkData || {};
+  categoryStates = stored.categoryStates || {};
+
+  [...defaultCategories, "Uncategorized"].forEach(cat => {
+    if (!categoryStates[cat]) {
+      categoryStates[cat] = { enabled: true, open: true };
+    }
+  });
 
   await updateResetStatus();
 
@@ -45,57 +51,102 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   async function loadFolder(folderId) {
-    list.innerHTML = "";
+    categoryContainer.innerHTML = "";
     const results = await browser.bookmarks.getSubTree(folderId);
     const folder = results[0];
     const bookmarks = folder.children.filter((b) => b.url);
 
+    const grouped = {};
     bookmarks.forEach((bm) => {
-      const clone = document.importNode(template.content, true);
-      const li = clone.querySelector("li");
-      const titleSpan = li.querySelector(".title");
-      const checkbox = li.querySelector(".doneCheckbox");
-      const categorySelect = li.querySelector(".categorySelect");
-
-      titleSpan.textContent = bm.title;
-      categorySelect.innerHTML = "";
-
-      defaultCategories.forEach((cat) => {
-        const option = document.createElement("option");
-        option.value = cat;
-        option.textContent = cat;
-        categorySelect.appendChild(option);
-      });
-
       const data = bookmarkData[bm.id] || {};
-      checkbox.checked = data.doneToday || false;
-      categorySelect.value = data.category || "";
-
-      checkbox.addEventListener("change", () => {
-        bookmarkData[bm.id] = {
-          ...bookmarkData[bm.id],
-          doneToday: checkbox.checked,
-          lastChecked: new Date().toISOString()
-        };
-        saveData();
-      });
-
-      categorySelect.addEventListener("change", () => {
-        bookmarkData[bm.id] = {
-          ...bookmarkData[bm.id],
-          category: categorySelect.value
-        };
-        saveData();
-      });
-
-      list.appendChild(li);
+      const category = data.category || "Uncategorized";
+      if (!grouped[category]) grouped[category] = [];
+      grouped[category].push(bm);
     });
 
-    info.textContent = `Loaded ${bookmarks.length} bookmarks.`;
-  }
+    for (const cat of Object.keys(grouped)) {
+      const catTemplate = document.getElementById("categoryTemplate");
+      const catClone = document.importNode(catTemplate.content, true);
+      const block = catClone.querySelector(".category-block");
+      const checkbox = block.querySelector(".categoryEnabled");
+      const nameSpan = block.querySelector(".categoryName");
+      const toggleImg = block.querySelector(".toggleCategory");
+      const list = block.querySelector(".bookmark-list");
 
-  async function saveData() {
-    await browser.storage.local.set({ bookmarkData });
+      nameSpan.textContent = cat;
+
+      checkbox.checked = categoryStates[cat]?.enabled ?? true;
+      if (categoryStates[cat]?.open === false) {
+        list.style.display = "none";
+      } else {
+        toggleImg.classList.add("open");
+      }
+
+      checkbox.addEventListener("change", () => {
+        categoryStates[cat] = {
+          ...categoryStates[cat],
+          enabled: checkbox.checked
+        };
+        saveCategoryStates();
+      });
+
+      toggleImg.addEventListener("click", () => {
+        const isVisible = list.style.display !== "none";
+        list.style.display = isVisible ? "none" : "block";
+        categoryStates[cat] = {
+          ...categoryStates[cat],
+          open: !isVisible
+        };
+        toggleImg.classList.toggle("open", !isVisible);
+        saveCategoryStates();
+      });
+
+      grouped[cat].forEach((bm) => {
+        const bmClone = document.getElementById("bookmarkTemplate").content.cloneNode(true);
+        const li = bmClone.querySelector("li");
+        const titleSpan = li.querySelector(".title");
+        const checkbox = li.querySelector(".doneCheckbox");
+        const categorySelect = li.querySelector(".categorySelect");
+
+        titleSpan.textContent = bm.title;
+        categorySelect.innerHTML = "";
+
+        defaultCategories.forEach((catOption) => {
+          const option = document.createElement("option");
+          option.value = catOption;
+          option.textContent = catOption;
+          categorySelect.appendChild(option);
+        });
+
+        const data = bookmarkData[bm.id] || {};
+        checkbox.checked = data.doneToday || false;
+        categorySelect.value = data.category || "";
+
+        checkbox.addEventListener("change", () => {
+          bookmarkData[bm.id] = {
+            ...bookmarkData[bm.id],
+            doneToday: checkbox.checked,
+            lastChecked: new Date().toISOString()
+          };
+          saveBookmarkData();
+        });
+
+        categorySelect.addEventListener("change", () => {
+          bookmarkData[bm.id] = {
+            ...bookmarkData[bm.id],
+            category: categorySelect.value
+          };
+          saveBookmarkData();
+          loadFolder(currentFolderId); // Reload to regroup
+        });
+
+        list.appendChild(li);
+      });
+
+      categoryContainer.appendChild(block);
+    }
+
+    info.textContent = `Loaded ${bookmarks.length} bookmarks.`;
   }
 
   async function updateResetStatus() {
@@ -109,25 +160,38 @@ document.addEventListener("DOMContentLoaded", async () => {
         data.doneToday = false;
       }
     }
-    await saveData();
+    await saveBookmarkData();
+  }
+
+  async function saveBookmarkData() {
+    await browser.storage.local.set({ bookmarkData });
+  }
+
+  async function saveCategoryStates() {
+    await browser.storage.local.set({ categoryStates });
   }
 
   startPlayBtn.addEventListener("click", async () => {
     if (!currentFolderId) return;
     const results = await browser.bookmarks.getSubTree(currentFolderId);
     const folder = results[0];
-    const playBookmarks = folder.children.filter((b) => b.url);
+    const allBookmarks = folder.children.filter((b) => b.url);
+
+    const toPlay = allBookmarks.filter((bm) => {
+      const cat = bookmarkData[bm.id]?.category || "Uncategorized";
+      return categoryStates[cat]?.enabled === true;
+    });
 
     await browser.storage.local.set({
       playState: {
         index: 0,
         folderId: currentFolderId,
-        bookmarkIds: playBookmarks.map((b) => b.id)
+        bookmarkIds: toPlay.map((b) => b.id)
       }
     });
 
-    if (playBookmarks.length > 0) {
-      const first = playBookmarks[0];
+    if (toPlay.length > 0) {
+      const first = toPlay[0];
       await browser.tabs.create({ url: first.url });
     }
   });
