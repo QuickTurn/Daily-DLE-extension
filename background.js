@@ -8,24 +8,30 @@ browser.commands.onCommand.addListener(async (command) => {
   const bmId = bookmarkIds[index];
   const bm = await browser.bookmarks.get(bmId).then(r => r[0]);
 
+  let nextIndex = index;
   if (command === "mark_done") {
     bookmarkData[bm.id] = {
       ...bookmarkData[bm.id],
       doneToday: true,
       lastChecked: new Date().toISOString()
     };
+    nextIndex++;
+  } else if (command === "skip_game") {
+    nextIndex++;
   }
 
-  const nextIndex = index + 1;
   if (nextIndex < bookmarkIds.length) {
     const nextBm = await browser.bookmarks.get(bookmarkIds[nextIndex]).then(r => r[0]);
     await browser.tabs.create({ url: nextBm.url });
     await browser.storage.local.set({
-      bookmarkData,
-      playState: { index: nextIndex, folderId, bookmarkIds }
+      playState: { index: nextIndex, folderId, bookmarkIds },
+      bookmarkData
     });
   } else {
     console.log("Reached end of bookmark list.");
-    await browser.storage.local.set({ bookmarkData, playState: { index: 0 } });
+    await browser.storage.local.set({
+      playState: { index: 0, folderId, bookmarkIds },
+      bookmarkData
+    });
   }
 });
