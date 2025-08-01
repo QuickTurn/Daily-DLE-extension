@@ -129,13 +129,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (playBookmarks.length > 0) {
       const first = playBookmarks[0];
       await browser.tabs.create({ url: first.url });
-
-      browser.windows.create({
-        url: browser.runtime.getURL("play.html"),
-        type: "popup",
-        width: 300,
-        height: 200
-      });
     }
   });
 });
