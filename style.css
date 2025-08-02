@@ -1,7 +1,7 @@
 body {
   font-family: sans-serif;
   padding: 10px;
-  min-width: 280px;
+  width: 320px;
   background-color: #1e1e1e;
   color: #e0e0e0;
 }
@@ -65,5 +65,14 @@ li {
 .title {
   display: block;
   font-weight: bold;
+  margin-bottom: 4px;
+}
+
+#folderSelect{
+  margin-bottom: 4px;
+}
+
+#info{
+  margin-top: 4px;
   margin-bottom: 4px;
 }
