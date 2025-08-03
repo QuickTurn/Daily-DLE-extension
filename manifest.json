@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
-  "name": "Bookmark Folder Navigator",
+  "name": "Daily-DLE's Navigator",
   "version": "1.0",
-  "description": "Navigate and track bookmarks with categories, done checkboxes, and play mode.",
+  "description": "Navigate and track bookmarks with categories, done checkboxes, and play mode. Specialized for Daily Browser Games",
   "permissions": ["bookmarks", "storage", "tabs"],
   "background": {
     "scripts": ["background.js"]
