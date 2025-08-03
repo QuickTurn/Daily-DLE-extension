@@ -1,4 +1,4 @@
-const defaultCategories = ["Word-Game", "Geo-Game", "Music-Game", "Puzzle-Game"];
+const defaultCategories = ["Word-Game", "Geo-Game", "Music-Game", "Puzzle-Game", "Movie-Game", "Undefined"];
 let currentFolderId = null;
 let bookmarkData = {};
 let categoryStates = {};
