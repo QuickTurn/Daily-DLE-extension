@@ -2,10 +2,12 @@
   "manifest_version": 2,
   "name": "Daily-DLE's Navigator",
   "version": "1.0",
+  "icons": {"128": "icons/icon128.png"},
   "description": "Navigate and track bookmarks with categories, done checkboxes, and play mode. Specialized for Daily Browser Games",
   "permissions": ["bookmarks", "storage", "tabs"],
   "background": {
     "scripts": ["background.js"]
+  
   },
   "commands": {
     "mark_done": {
