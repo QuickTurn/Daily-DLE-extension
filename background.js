@@ -1,4 +1,3 @@
-
 browser.commands.onCommand.addListener(async (command) => {
 
   const storage = await browser.storage.local.get(["playState", "bookmarkData"]);
@@ -57,3 +56,46 @@ browser.commands.onCommand.addListener(async (command) => {
     bookmarkData
   });
 });
+
+// Funktion, die alle "doneToday" zurücksetzt um 02:00 GMT+2 (angepasst auf die meisten websiten aber viele sind auch noch anders)
+async function resetDailyStatus() {
+  const { bookmarkData = {} } = await browser.storage.local.get("bookmarkData");
+  const now = new Date();
+  const todayUTC = now.toISOString().split("T")[0];
+
+  for (const [id, data] of Object.entries(bookmarkData)) {
+    if (!data.lastChecked) continue;
+    const lastDate = data.lastChecked.split("T")[0];
+    if (lastDate < todayUTC) {
+      data.doneToday = false;
+    }
+  }
+
+  await browser.storage.local.set({ bookmarkData });
+  console.log("Daily reset ausgeführt:", new Date().toLocaleString());
+}
+
+// Alarm erstellen
+function scheduleDailyReset() {
+  // Berechne, wie viele Minuten bis 02:00 Uhr GMT+2
+  const now = new Date();
+  const target = new Date();
+  target.setUTCHours(0, 0, 0, 0); // 00:00 UTC = 02:00 GMT+2
+  if (target < now) target.setUTCDate(target.getUTCDate() + 1);
+  const delayMinutes = (target - now) / 60000;
+
+  // Alarm setzen
+  browser.alarms.create("dailyReset", {
+    delayInMinutes: delayMinutes,
+    periodInMinutes: 24 * 60
+  });
+}
+
+// Listener für Alarm
+browser.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "dailyReset") {
+    resetDailyStatus();
+  }
+});
+
+scheduleDailyReset();
