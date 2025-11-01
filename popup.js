@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   bookmarkData = stored.bookmarkData || {};
   categoryStates = stored.categoryStates || {};
 
+  // Standard-Kategorien initialisieren
   [...defaultCategories, "Uncategorized"].forEach(cat => {
     if (!categoryStates[cat]) {
       categoryStates[cat] = { enabled: true, open: true };
@@ -22,6 +23,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   await updateResetStatus();
 
+  // Bookmarks-Folder laden
   const nodes = await browser.bookmarks.getTree();
   const folders = [];
   const traverse = (node) => {
@@ -171,17 +173,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     await browser.storage.local.set({ categoryStates });
   }
 
+  // ⬇️ HIER ist die geänderte Stelle
   startPlayBtn.addEventListener("click", async () => {
     if (!currentFolderId) return;
+
+    // 1) Frische Daten holen, weil background.js sie beim Hotkey geändert haben kann
+    const fresh = await browser.storage.local.get(["bookmarkData", "categoryStates"]);
+    bookmarkData = fresh.bookmarkData || {};
+    categoryStates = fresh.categoryStates || {};
+
+    // 2) Bookmarks aus aktuellem Ordner holen
     const results = await browser.bookmarks.getSubTree(currentFolderId);
     const folder = results[0];
     const allBookmarks = folder.children.filter((b) => b.url);
 
+    // 3) Nur Bookmarks nehmen bei welchen kategorie an ist und die noch nicht done today sind
     const toPlay = allBookmarks.filter((bm) => {
-      const cat = bookmarkData[bm.id]?.category || "Uncategorized";
-      return categoryStates[cat]?.enabled === true;
+      const data = bookmarkData[bm.id] || {};
+      const cat = data.category || "Uncategorized";
+
+      if (categoryStates[cat]?.enabled !== true) return false;
+      if (data.doneToday === true) return false;
+
+      return true;
     });
 
+    // 4) neuen PlayState setzen
     await browser.storage.local.set({
       playState: {
         index: 0,
@@ -190,6 +207,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
 
+    // 5) erstes offenes Spiel öffnen
     if (toPlay.length > 0) {
       const first = toPlay[0];
       await browser.tabs.create({ url: first.url });
