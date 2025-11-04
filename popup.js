@@ -11,11 +11,23 @@ async function reloadStorageState() {
   categoryStates = stored.categoryStates || {};
 }
 
-// Holt alle Bookmarks (keine Unterordner) aus einem Ordner.
+// Holt alle Bookmarks (inkl. Unterordner) aus einem Ordner.
 async function getBookmarksFromFolder(folderId) {
   const results = await browser.bookmarks.getSubTree(folderId);
   const folder = results[0];
-  return folder.children.filter((b) => b.url);
+  const allBookmarks = [];
+
+  function collectBookmarks(node) {
+    if (node.url) {
+      allBookmarks.push(node);
+    }
+    if (node.children) {
+      node.children.forEach(collectBookmarks);
+    }
+  }
+
+  collectBookmarks(folder);
+  return allBookmarks;
 }
 
 // Setzt die doneToday-Flags zurück, falls ein neuer Tag begonnen hat (lokale, einfache Prüfung).
@@ -115,16 +127,12 @@ async function loadFolder(folderId) {
       categorySelect.value = data.category || "";
 
       checkbox.addEventListener("change", () => {
-        bookmarkData[bm.id] = {
-          ...bookmarkData[bm.id],
-          doneToday: checkbox.checked,
-          lastChecked: new Date().toISOString()
-        };
+        bookmarkData[bm.id] = {...bookmarkData[bm.id], doneToday: checkbox.checked, lastChecked: new Date().toISOString()};
         saveBookmarkData();
       });
 
       categorySelect.addEventListener("change", () => {
-        bookmarkData[bm.id] = { ...bookmarkData[bm.id], category: categorySelect.value };
+        bookmarkData[bm.id] = {...bookmarkData[bm.id], category: categorySelect.value};
         saveBookmarkData();
         loadFolder(currentFolderId); // simpel: UI komplett neu gruppieren
       });
@@ -147,7 +155,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   bookmarkData = stored.bookmarkData || {};
   categoryStates = stored.categoryStates || {};
 
-  defaultCategories.forEach(cat => {
+  defaultCategories.forEach((cat) => {
     if (!categoryStates[cat]) categoryStates[cat] = { enabled: true, open: true };
   });
 

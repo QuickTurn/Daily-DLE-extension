@@ -1,22 +1,39 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
-  <title>DLE Bookmark Navigator</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="color-scheme" content="dark light">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Daily Games</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h2>Select Folder</h2>
-  <select id="folderSelect"></select>
-  <div id="info"></div>
+  <header class="topbar">
+    <h1 class="app-title">Daily Games</h1>
+    <div class="top-actions">
+      <select id="folderSelect" class="select"></select>
+      <button id="startPlayBtn" class="btn btn-primary">▶ Start</button>
+    </div>
+  </header>
 
-  <button id="startPlayBtn">Start Play Mode</button>
+  <section class="utilities">
+    <div id="info" class="info">—</div>
+  </section>
 
-  <div id="categoryContainer"></div>
+  <main id="categoryContainer" class="category-list"></main>
 
+  <footer class="footer">
+    <div class="hint">
+      <strong>Hotkeys:</strong> Done = <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Y</kbd>,
+      Skip = <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Y</kbd>
+    </div>
+  </footer>
+
+  <!-- Template für Kategorien -->
   <template id="categoryTemplate">
     <div class="category-block">
       <div class="category-header">
-        <img src="icons/arrow_down.png" class="toggleCategory arrow" />
+        <img src="icons/arrow_down.png" class="toggleCategory arrow" alt="toggle">
         <label class="categoryLabel">
           <input type="checkbox" class="categoryEnabled">
           <span class="categoryName"></span>
@@ -26,16 +43,20 @@
     </div>
   </template>
 
+  <!-- Template für einzelne Bookmarks -->
   <template id="bookmarkTemplate">
-    <li>
+    <li class="bookmark-item">
       <span class="title"></span>
-      <label>
-        <input type="checkbox" class="doneCheckbox">
-        Done Today
-      </label>
-      <select class="categorySelect"></select>
+      <div class="bookmark-controls">
+        <select class="categorySelect"></select>
+        <label class="checkbox done" title="Heute erledigt">
+          <input type="checkbox" class="doneCheckbox">
+          <span></span>
+        </label>
+      </div>
     </li>
   </template>
+
+  <script src="popup.js"></script>
 </body>
-<script src="popup.js"></script>
 </html>
