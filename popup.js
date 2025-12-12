@@ -155,9 +155,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   bookmarkData = stored.bookmarkData || {};
   categoryStates = stored.categoryStates || {};
 
+  let needsSave = false;
   defaultCategories.forEach((cat) => {
-    if (!categoryStates[cat]) categoryStates[cat] = { enabled: true, open: true };
+    if (!categoryStates[cat]) {
+      categoryStates[cat] = { enabled: true, open: true };
+      needsSave = true;
+    }
   });
+
+  if (needsSave) {
+    await saveCategoryStates();
+  }
 
   // Täglich-Reset (Popup-seitig) prüfen
   await updateResetStatus();

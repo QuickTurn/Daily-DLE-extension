@@ -73,7 +73,7 @@ async function resetDailyStatus() {
   }
 
   await browser.storage.local.set({ bookmarkData });
-  console.log("✅ Daily reset ausgeführt:", new Date().toLocaleString());
+  console.log("Daily reset ausgeführt:", new Date().toLocaleString());
 }
 
 // Plant einen wiederkehrenden Alarm, der täglich um 02:00 (GMT+2) den Reset auslöst.
@@ -98,5 +98,4 @@ browser.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
-// Initiale Planung beim Laden des Hintergrundskripts.
 scheduleDailyReset();
