@@ -1,88 +1,105 @@
-// Reagiert auf die Hotkeys. Entweder Überspringen oder als erledigt markieren.
-browser.commands.onCommand.addListener(async (command) => {
+async function getBookmarkById(bmId) {
+  try {
+    const result = await browser.bookmarks.get(bmId);
+    return result[0];
+  } catch (e) {
+    console.error("Failed to load bookmark:", e);
+    return null;
+  }
+}
 
+async function markBookmarkDone(bmId, bookmarkData) {
+  bookmarkData[bmId] = {
+    ...bookmarkData[bmId],
+    doneToday: true,
+    lastChecked: new Date().toISOString()
+  };
+  return bookmarkData;
+}
+
+async function openNextBookmark(bookmarkIds, nextIndex) {
+  if (nextIndex >= bookmarkIds.length) {
+    console.log("All games completed or skipped.");
+    return false;
+  }
+
+  const nextBm = await getBookmarkById(bookmarkIds[nextIndex]);
+  if (nextBm) {
+    console.log("Opening next bookmark:", nextBm.title);
+    await browser.tabs.create({ url: nextBm.url });
+    return true;
+  }
+
+  return false;
+}
+
+async function handlePlayCommand(command) {
   const storage = await browser.storage.local.get(["playState", "bookmarkData"]);
   const { playState = {}, bookmarkData = {} } = storage;
   const { index = 0, folderId, bookmarkIds = [] } = playState;
 
   if (!folderId || index >= bookmarkIds.length) {
-    console.warn("Kein gültiger PlayState oder Ende erreicht.");
+    console.warn("No valid playState or end reached.");
     return;
   }
 
   const bmId = bookmarkIds[index];
-
-  let bm;
-  try {
-    const result = await browser.bookmarks.get(bmId);
-    bm = result[0];
-  } catch (e) {
-    console.error("Fehler beim Laden des Bookmarks:", e);
-    return;
-  }
+  const bm = await getBookmarkById(bmId);
+  if (!bm) return;
 
   let nextIndex = index;
+  let updatedBookmarkData = bookmarkData;
 
   if (command === "mark_done") {
-    console.log("Markiere als erledigt:", bm.title);
-    bookmarkData[bm.id] = {
-      ...bookmarkData[bm.id],
-      doneToday: true,
-      lastChecked: new Date().toISOString()
-    };
+    console.log("Marking as done:", bm.title);
+    updatedBookmarkData = await markBookmarkDone(bm.id, bookmarkData);
     nextIndex++;
   } else if (command === "skip_game") {
-    console.log("Überspringe Spiel:", bm.title);
+    console.log("Skipping game:", bm.title);
     nextIndex++;
   } else {
-    console.warn("Unbekannter Command:", command);
+    console.warn("Unknown command:", command);
     return;
   }
 
-  if (nextIndex < bookmarkIds.length) {
-    try {
-      const nextBm = await browser.bookmarks.get(bookmarkIds[nextIndex]).then(r => r[0]);
-      console.log("Öffne nächsten Bookmark:", nextBm.title);
-      await browser.tabs.create({ url: nextBm.url }); // bewusst neuer Tab (Punkt 5 NICHT umgesetzt)
-    } catch (e) {
-      console.error("Fehler beim Öffnen des nächsten Bookmarks:", e);
-    }
-  } else {
-    console.log("Alle Spiele erledigt oder übersprungen.");
-  }
+  await openNextBookmark(bookmarkIds, nextIndex);
 
-  // Speicher neuen Zustand
   await browser.storage.local.set({
     playState: { index: nextIndex, folderId, bookmarkIds },
-    bookmarkData
+    bookmarkData: updatedBookmarkData
   });
-});
+}
 
-// Setzt täglich die doneToday-Flags zurück, wenn der Tag wechselt.
 async function resetDailyStatus() {
   const { bookmarkData = {} } = await browser.storage.local.get("bookmarkData");
   const now = new Date();
   const todayUTC = now.toISOString().split("T")[0];
+  let hasChanges = false;
 
   for (const [id, data] of Object.entries(bookmarkData)) {
     if (!data.lastChecked) continue;
     const lastDate = data.lastChecked.split("T")[0];
     if (lastDate < todayUTC) {
       data.doneToday = false;
+      hasChanges = true;
     }
   }
 
-  await browser.storage.local.set({ bookmarkData });
-  console.log("Daily reset ausgeführt:", new Date().toLocaleString());
+  if (hasChanges) {
+    await browser.storage.local.set({ bookmarkData });
+    console.log("Daily reset executed:", new Date().toLocaleString());
+  }
 }
 
-// Plant einen wiederkehrenden Alarm, der täglich um 02:00 (GMT+2) den Reset auslöst.
 function scheduleDailyReset() {
-  // 02:00 GMT+2 entspricht 00:00 UTC
   const now = new Date();
   const target = new Date();
-  target.setUTCHours(0, 0, 0, 0); // 00:00 UTC = 02:00 GMT+2
-  if (target < now) target.setUTCDate(target.getUTCDate() + 1);
+  target.setUTCHours(0, 0, 0, 0);
+  
+  if (target < now) {
+    target.setUTCDate(target.getUTCDate() + 1);
+  }
+
   const delayMinutes = (target - now) / 60000;
 
   browser.alarms.create("dailyReset", {
@@ -91,7 +108,8 @@ function scheduleDailyReset() {
   });
 }
 
-// Startet den täglichen Reset, wenn der Alarm auslöst.
+browser.commands.onCommand.addListener(handlePlayCommand);
+
 browser.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "dailyReset") {
     resetDailyStatus();
