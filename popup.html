@@ -33,6 +33,7 @@
   <template id="categoryTemplate">
     <div class="category-block">
       <div class="category-header">
+        <span class="dragHandle categoryDragHandle" title="Ziehen zum Sortieren">⠿</span>
         <img src="icons/arrow_down.png" class="toggleCategory arrow" alt="toggle">
         <label class="categoryLabel">
           <input type="checkbox" class="categoryEnabled">
@@ -46,6 +47,7 @@
   <!-- Template für einzelne Bookmarks -->
   <template id="bookmarkTemplate">
     <li class="bookmark-item">
+      <span class="dragHandle bookmarkDragHandle" title="Ziehen zum Sortieren">⠿</span>
       <span class="title"></span>
       <div class="bookmark-controls">
         <select class="categorySelect"></select>

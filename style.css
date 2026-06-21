@@ -102,7 +102,6 @@ body {
 .category-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   cursor: pointer;
 }
@@ -121,6 +120,27 @@ body {
 }
 .categoryName { font-weight: 600; }
 
+/* ---- Drag-Griff ---- */
+.dragHandle {
+  cursor: grab;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  user-select: none;
+  padding: 0 2px;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+.dragHandle:hover { color: var(--text); }
+.dragHandle:active { cursor: grabbing; }
+
+/* ---- Drag-Zustände ---- */
+.category-block.dragging,
+.bookmark-item.dragging {
+  opacity: 0.5;
+  border-color: var(--accent);
+}
+
 /* ---- Bookmark list ---- */
 .bookmark-list {
   list-style: none;
@@ -133,8 +153,8 @@ body {
 
 .bookmark-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 8px;
   background: var(--panel);
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -148,12 +168,15 @@ body {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
 }
 
 .bookmark-controls {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .categorySelect {
