@@ -12,7 +12,7 @@
   Choose any folder from your browser's bookmarks. The extension automatically loads all websites inside it.
 
 - **Play Mode (in your category order)**  
-  Automatically opens all enabled, not-yet-done websites in sequence using your chosen hotkeys. Play Mode now follows **your** arrangement: it goes category by category in the order you set, and within each category in the order you arranged the bookmarks — so e.g. all your Music games play back-to-back instead of being interrupted by whatever order they happen to sit in the bookmark folder. Your current progress is remembered, and already-done sites are skipped.
+  Automatically opens all enabled, not-yet-done websites in sequence using your chosen hotkeys. Play Mode now follows **your** arrangement: it goes category by category in the order you set, and within each category in the order you arranged the bookmarks. So e.g. all your Music games play back-to-back instead of being interrupted by whatever order they happen to sit in the bookmark folder. Your current progress is remembered, and already-done sites are skipped.
 
 - **Categories**  
   Assign a category to each bookmark via the dropdown next to it. The extension ships with these defaults:
@@ -20,10 +20,10 @@
   Bookmarks without a category default to `Uncategorized`. You can disable an entire category from Play Mode using the checkbox next to its name.
 
 - **Custom Categories (Add / Delete)**  
-  Click **✎ Edit Categories** at the bottom of the popup to open the management view (it opens inside the same popup — no separate window). There you can:
+  Click **✎ Edit Categories** at the bottom of the popup to open the management view (it opens inside the same popup so no separate window). There you can:
   - **Add** your own categories by typing a name and pressing Enter or "Hinzufügen".
   - **Delete** any category via the **×** button (with a two-click confirmation). `Uncategorized` is protected and cannot be deleted, since it's the fallback.
-  - Deleting a category is non-destructive: any bookmarks in it are moved back to `Uncategorized` — nothing is lost.
+  - Deleting a category is non-destructive: any bookmarks in it are moved back to `Uncategorized` to ensure nothing is lost.
 
 - **Custom Ordering (Drag & Drop)**  
   Each category and each bookmark has a drag handle (**⠿**) on its left. Grab it with the left mouse button and drag to reorder:
@@ -78,7 +78,7 @@ You can use the following keyboard shortcuts to control Play Mode:
 4. The bookmark should fall back to `Uncategorized` automatically.
 
 **Ordering Testing:**
-1. Drag a category by its **⠿** handle to a new position — reopen the popup and confirm the order persisted.
+1. Drag a category by its **⠿** handle to a new position.
 2. Drag a bookmark within a category to reorder it.
 3. Start Play Mode and confirm games open in your category/bookmark order.
 
