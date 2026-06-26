@@ -8,28 +8,51 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header class="topbar">
-    <h1 class="app-title">Daily Games</h1>
-    <div class="top-actions">
-      <select id="folderSelect" class="select"></select>
-      <button id="startPlayBtn" class="btn btn-primary">▶ Start</button>
-    </div>
-  </header>
 
-  <section class="utilities">
-    <div id="info" class="info">—</div>
-  </section>
+  <div id="mainView">
+    <header class="topbar">
+      <h1 class="app-title">Daily Games</h1>
+      <div class="top-actions">
+        <select id="folderSelect" class="select"></select>
+        <button id="startPlayBtn" class="btn btn-primary">▶ Start</button>
+      </div>
+    </header>
 
-  <main id="categoryContainer" class="category-list"></main>
+    <section class="utilities">
+      <div id="info" class="info">—</div>
+    </section>
 
-  <footer class="footer">
-    <div class="hint">
-      <strong>Hotkeys:</strong> Done = <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Y</kbd>,
-      Skip = <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Y</kbd>
-    </div>
-  </footer>
+    <main id="categoryContainer" class="category-list"></main>
 
-  <!-- Template für Kategorien -->
+    <footer class="footer">
+      <button id="openSettingsBtn" class="btn btn-ghost">✎ Edit Categories</button>
+      <div class="hint">
+        <strong>Hotkeys:</strong> Done = <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Y</kbd>,
+        Skip = <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Y</kbd>
+      </div>
+    </footer>
+  </div>
+
+  <div id="settingsView" hidden>
+    <header class="topbar">
+      <button id="backBtn" class="btn btn-ghost">← Zurück</button>
+      <h1 class="app-title">Edit Categories</h1>
+    </header>
+
+    <section class="settings-add">
+      <input id="newCategoryInput" class="select" type="text" placeholder="Neue Kategorie…" maxlength="40" />
+      <button id="addCategoryBtn" class="btn btn-primary">Hinzufügen</button>
+    </section>
+
+    <div id="settingsStatus" class="settings-status"></div>
+
+    <div id="categoryManageList" class="manage-list"></div>
+
+    <footer class="footer">
+      <div class="hint">Gelöschte Kategorien setzen ihre Bookmarks auf „Uncategorized" zurück – es geht nichts verloren.</div>
+    </footer>
+  </div>
+
   <template id="categoryTemplate">
     <div class="category-block">
       <div class="category-header">
@@ -44,7 +67,6 @@
     </div>
   </template>
 
-  <!-- Template für einzelne Bookmarks -->
   <template id="bookmarkTemplate">
     <li class="bookmark-item">
       <span class="dragHandle bookmarkDragHandle" title="Ziehen zum Sortieren">⠿</span>

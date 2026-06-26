@@ -1,11 +1,12 @@
 const DEFAULT_CATEGORIES = ["Word-Game", "Geo-Game", "Music-Game", "Puzzle-Game", "Movie-Game", "Undefined", "Uncategorized"];
+const FALLBACK_CATEGORY = "Uncategorized"; // darf nie gelöscht werden
 
 let currentFolderId = null;
 let bookmarkData = {};
 let categoryStates = {};
 let categoryOrder = [];
 
-// (Bookmarks dürfen vorerst nur innerhalb der eigenen Kategorie verschoben werden)
+// Merkt sich beim Bookmark-Drag, aus welcher Liste das Item kommt
 let draggedBookmarkList = null;
 
 async function reloadStorageState() {
@@ -13,6 +14,18 @@ async function reloadStorageState() {
   bookmarkData = stored.bookmarkData || {};
   categoryStates = stored.categoryStates || {};
   categoryOrder = stored.categoryOrder || categoryOrder;
+}
+
+async function saveBookmarkData() {
+  await browser.storage.local.set({ bookmarkData });
+}
+
+async function saveCategoryStates() {
+  await browser.storage.local.set({ categoryStates });
+}
+
+async function saveCategoryOrder() {
+  await browser.storage.local.set({ categoryOrder });
 }
 
 async function getBookmarksFromFolder(folderId) {
@@ -52,26 +65,14 @@ async function updateResetStatus() {
   }
 }
 
-async function saveBookmarkData() {
-  await browser.storage.local.set({ bookmarkData });
-}
-
-async function saveCategoryStates() {
-  await browser.storage.local.set({ categoryStates });
-}
-
-async function saveCategoryOrder() {
-  await browser.storage.local.set({ categoryOrder });
-}
-
-// Liefert die vorhandenen Kategorien in der gespeicherten Reihenfolge.
+// Vorhandene Kategorien in gespeicherter Reihenfolge; unbekannte hinten dran
 function getOrderedCategories(categoriesPresent) {
   const ordered = categoryOrder.filter((c) => categoriesPresent.includes(c));
   const extras = categoriesPresent.filter((c) => !categoryOrder.includes(c));
   return [...ordered, ...extras];
 }
 
-// Bookmarks ohne order behalten ihre relative Reihenfolge und landen hinten.
+// Bookmarks innerhalb einer Kategorie nach gespeichertem order-Wert sortieren.
 function sortBookmarksByOrder(bookmarks) {
   return [...bookmarks].sort((a, b) => {
     const oa = bookmarkData[a.id]?.order ?? Number.MAX_SAFE_INTEGER;
@@ -80,6 +81,7 @@ function sortBookmarksByOrder(bookmarks) {
   });
 }
 
+// Findet das Element, vor dem das gezogene Element eingefügt werden soll.
 function getDragAfterElement(container, selector, y) {
   const els = [...container.querySelectorAll(selector)];
   return els.reduce((closest, child) => {
@@ -151,14 +153,14 @@ function createCategoryBlock(category, bookmarks) {
     saveCategoryStates();
   });
 
-  // Block wird nur draggable, solange der Griff gehalten wird.
+  // Drag: Block nur draggable, solange der Griff gehalten wird.
   handle.addEventListener("mousedown", () => block.setAttribute("draggable", "true"));
   handle.addEventListener("mouseup", () => block.removeAttribute("draggable"));
 
   block.addEventListener("dragstart", (e) => {
     block.classList.add("dragging");
     e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", category); 
+    e.dataTransfer.setData("text/plain", category);
   });
 
   block.addEventListener("dragend", () => {
@@ -167,9 +169,8 @@ function createCategoryBlock(category, bookmarks) {
     persistCategoryOrderFromDOM();
   });
 
-  // Bookmark Sortierung innerhalb genau dieser Liste
   list.addEventListener("dragover", (e) => {
-    if (!draggedBookmarkList || draggedBookmarkList !== list) return; // nur eigene Liste
+    if (!draggedBookmarkList || draggedBookmarkList !== list) return;
     e.preventDefault();
     e.stopPropagation();
     const dragging = list.querySelector(".bookmark-item.dragging");
@@ -201,7 +202,7 @@ function createBookmarkItem(bookmark) {
   li.dataset.bookmarkId = bookmark.id;
   titleSpan.textContent = bookmark.title;
 
-  DEFAULT_CATEGORIES.forEach((catOption) => {
+  categoryOrder.forEach((catOption) => {
     const option = document.createElement("option");
     option.value = catOption;
     option.textContent = catOption;
@@ -210,7 +211,7 @@ function createBookmarkItem(bookmark) {
 
   const data = bookmarkData[bookmark.id] || {};
   checkbox.checked = data.doneToday || false;
-  categorySelect.value = data.category || "Uncategorized";
+  categorySelect.value = data.category || FALLBACK_CATEGORY;
 
   checkbox.addEventListener("change", () => {
     bookmarkData[bookmark.id] = {
@@ -234,7 +235,7 @@ function createBookmarkItem(bookmark) {
   handle.addEventListener("mouseup", () => li.removeAttribute("draggable"));
 
   li.addEventListener("dragstart", (e) => {
-    e.stopPropagation(); // verhindert, dass der Kategorie-Drag mitgetriggert wird
+    e.stopPropagation();
     draggedBookmarkList = li.closest(".bookmark-list");
     li.classList.add("dragging");
     e.dataTransfer.effectAllowed = "move";
@@ -253,16 +254,14 @@ function createBookmarkItem(bookmark) {
 
 function groupBookmarksByCategory(bookmarks) {
   const grouped = {};
-
   bookmarks.forEach((bm) => {
     const data = bookmarkData[bm.id] || {};
-    const category = data.category || "Uncategorized";
+    const category = data.category || FALLBACK_CATEGORY;
     if (!grouped[category]) {
       grouped[category] = [];
     }
     grouped[category].push(bm);
   });
-
   return grouped;
 }
 
@@ -284,6 +283,7 @@ async function loadFolder(folderId) {
   info.textContent = `Loaded ${bookmarks.length} bookmarks.`;
 }
 
+// Play Mode Sachen
 async function startPlayMode() {
   if (!currentFolderId) return;
 
@@ -317,34 +317,136 @@ async function startPlayMode() {
   }
 }
 
+async function addCategory(rawName) {
+  const status = document.getElementById("settingsStatus");
+  const name = rawName.trim();
+
+  if (!name) return;
+
+  const exists = categoryOrder.some((c) => c.toLowerCase() === name.toLowerCase());
+  if (exists) {
+    status.textContent = `„${name}" existiert bereits.`;
+    status.className = "settings-status error";
+    return;
+  }
+
+  categoryOrder.push(name);
+  categoryStates[name] = { enabled: true, open: true };
+  await saveCategoryOrder();
+  await saveCategoryStates();
+
+  status.textContent = `„${name}" hinzugefügt.`;
+  status.className = "settings-status ok";
+  renderCategoryManageList();
+}
+
+async function deleteCategory(name) {
+  if (name === FALLBACK_CATEGORY) return;
+
+  // Bookmarks dieser Kategorie zurück auf den Fallback (nichts geht verloren).
+  let bookmarksChanged = false;
+  for (const id of Object.keys(bookmarkData)) {
+    if (bookmarkData[id].category === name) {
+      delete bookmarkData[id].category;
+      bookmarksChanged = true;
+    }
+  }
+
+  categoryOrder = categoryOrder.filter((c) => c !== name);
+  delete categoryStates[name];
+
+  await saveCategoryOrder();
+  await saveCategoryStates();
+  if (bookmarksChanged) await saveBookmarkData();
+
+  const status = document.getElementById("settingsStatus");
+  status.textContent = `„${name}" gelöscht.`;
+  status.className = "settings-status ok";
+  renderCategoryManageList();
+}
+
+function renderCategoryManageList() {
+  const container = document.getElementById("categoryManageList");
+  container.innerHTML = "";
+
+  categoryOrder.forEach((cat) => {
+    const row = document.createElement("div");
+    row.className = "manage-row";
+
+    const name = document.createElement("span");
+    name.className = "manage-name";
+    name.textContent = cat;
+    row.appendChild(name);
+
+    if (cat === FALLBACK_CATEGORY) {
+      const locked = document.createElement("span");
+      locked.className = "manage-locked";
+      locked.textContent = "Standard";
+      row.appendChild(locked);
+    } else {
+      const del = document.createElement("button");
+      del.className = "manage-delete";
+      del.textContent = "×";
+      del.title = "Kategorie löschen";
+
+      del.addEventListener("click", () => {
+        if (del.dataset.confirm === "1") {
+          deleteCategory(cat);
+        } else {
+          del.dataset.confirm = "1";
+          del.textContent = "Löschen?";
+          del.classList.add("confirm");
+          setTimeout(() => {
+            del.dataset.confirm = "0";
+            del.textContent = "×";
+            del.classList.remove("confirm");
+          }, 3000);
+        }
+      });
+
+      row.appendChild(del);
+    }
+
+    container.appendChild(row);
+  });
+}
+
+
+function showSettings() {
+  document.getElementById("settingsStatus").textContent = "";
+  document.getElementById("mainView").hidden = true;
+  document.getElementById("settingsView").hidden = false;
+  renderCategoryManageList();
+}
+
+function showMain() {
+  document.getElementById("settingsView").hidden = true;
+  document.getElementById("mainView").hidden = false;
+  // Hauptansicht neu aufbauen, damit Dropdowns die Kategorie-Änderungen zeigen.
+  if (currentFolderId) loadFolder(currentFolderId);
+}
+
+async function initializeCategoryOrder() {
+  if (!categoryOrder || categoryOrder.length === 0) {
+    categoryOrder = [...DEFAULT_CATEGORIES];
+    await saveCategoryOrder();
+    return;
+  }
+  if (!categoryOrder.includes(FALLBACK_CATEGORY)) {
+    categoryOrder.push(FALLBACK_CATEGORY);
+    await saveCategoryOrder();
+  }
+}
+
 async function initializeCategoryStates() {
   let needsSave = false;
-
-  DEFAULT_CATEGORIES.forEach((cat) => {
+  categoryOrder.forEach((cat) => {
     if (!categoryStates[cat]) {
       categoryStates[cat] = { enabled: true, open: true };
       needsSave = true;
     }
   });
-
-  if (needsSave) {
-    await saveCategoryStates();
-  }
-}
-
-async function initializeCategoryOrder() {
-  let needsSave = false;
-
-  DEFAULT_CATEGORIES.forEach((cat) => {
-    if (!categoryOrder.includes(cat)) {
-      categoryOrder.push(cat);
-      needsSave = true;
-    }
-  });
-
-  if (needsSave) {
-    await saveCategoryOrder();
-  }
+  if (needsSave) await saveCategoryStates();
 }
 
 async function populateFolderSelect() {
@@ -374,15 +476,12 @@ async function populateFolderSelect() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const stored = await browser.storage.local.get(["lastFolderId", "bookmarkData", "categoryStates", "categoryOrder"]);
+  await reloadStorageState();
+  const { lastFolderId } = await browser.storage.local.get("lastFolderId");
+  currentFolderId = lastFolderId || null;
 
-  currentFolderId = stored.lastFolderId || null;
-  bookmarkData = stored.bookmarkData || {};
-  categoryStates = stored.categoryStates || {};
-  categoryOrder = stored.categoryOrder || [];
-
-  await initializeCategoryStates();
   await initializeCategoryOrder();
+  await initializeCategoryStates();
   await updateResetStatus();
 
   document.addEventListener("mouseup", () => {
@@ -392,7 +491,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const categoryContainer = document.getElementById("categoryContainer");
   categoryContainer.addEventListener("dragover", (e) => {
     const dragging = categoryContainer.querySelector(".category-block.dragging");
-    if (!dragging) return; 
+    if (!dragging) return;
     e.preventDefault();
     const afterEl = getDragAfterElement(categoryContainer, ".category-block:not(.dragging)", e.clientY);
     if (afterEl == null) {
@@ -417,4 +516,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   startPlayBtn.addEventListener("click", startPlayMode);
+
+  document.getElementById("openSettingsBtn").addEventListener("click", showSettings);
+  document.getElementById("backBtn").addEventListener("click", showMain);
+
+  const newCategoryInput = document.getElementById("newCategoryInput");
+  const addCategoryBtn = document.getElementById("addCategoryBtn");
+
+  addCategoryBtn.addEventListener("click", async () => {
+    await addCategory(newCategoryInput.value);
+    newCategoryInput.value = "";
+    newCategoryInput.focus();
+  });
+
+  newCategoryInput.addEventListener("keydown", async (e) => {
+    if (e.key === "Enter") {
+      await addCategory(newCategoryInput.value);
+      newCategoryInput.value = "";
+    }
+  });
 });
